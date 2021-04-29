@@ -15,10 +15,10 @@
             "-fstrict-overflow",
             "-Winline",
             "-o",
-            "_build/t01sk.o",
-            "t01sk.c"
+            "_build/main.o",
+            "main.c"
         ],
-        "directory": "/home/bradley/src/c/fortuna-tasks/task1",
+        "directory": "/home/bradley/src/c/fortuna-mines",
         "file": "t01sk.c"
     }
 ]
