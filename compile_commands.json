@@ -1,0 +1,24 @@
+[
+    {
+        "arguments": [
+            "avr-gcc",
+            "-c",
+            "-Os",
+            "-mmcu=at90usb1286",
+            "-DF_CPU=8000000UL",
+            "-fno-strict-aliasing",
+            "-Wno-main",
+            "-Wall",
+            "-Wextra",
+            "-pedantic",
+            "-Wstrict-overflow=5",
+            "-fstrict-overflow",
+            "-Winline",
+            "-o",
+            "_build/t01sk.o",
+            "t01sk.c"
+        ],
+        "directory": "/home/bradley/src/c/fortuna-tasks/task1",
+        "file": "t01sk.c"
+    }
+]
