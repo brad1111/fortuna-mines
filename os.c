@@ -8,7 +8,6 @@
 
 
 #include "os.h"
-#include "debug.h"
 #include "rios.h"
 #include "ruota.h"
 
@@ -19,7 +18,6 @@ void os_init(void) {
 
     DDRB  |=  _BV(PB7);  	 /* LED as output */
 
-    init_debug_uart1();
     init_lcd();
     os_init_scheduler();
     os_init_ruota();
