@@ -203,3 +203,19 @@ int freeRam () {
   int v;
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
+
+
+// Minesweeper stuff
+
+// xorshift32 taken from wikipedia example
+struct xorshift32_state {
+    uint32_t a;
+}
+
+uint32_t xorshift32(struct xorshift32_state *state) {
+    uint32_t x = state->a;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    return state->a = x;
+}
