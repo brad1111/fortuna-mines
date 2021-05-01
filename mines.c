@@ -140,13 +140,16 @@ void main(void) {
 
 
 int collect_delta(int state) {
-	int oldPos = position;
+	int oldPos = position % BOARD_ITEMS;
 	if(scroll_direction == SCROLL_HORIZONTAL){
 		position += os_enc_delta();
 	} else {
 		position += BOARD_SIZE_X * os_enc_delta();
 	}
 
+	if (position < 0){
+		position = BOARD_ITEMS - position;
+	}
 
 
 ////		int left = position * 10;
@@ -160,6 +163,9 @@ int collect_delta(int state) {
 	} else { //is a mine
 		oldPosColour = RED;
 	}
+	char output[15];
+	sprintf(output,"oldPos:%d\n", oldPos);
+	display_string_xy(output, 0, 210);
 	update_selection_position(oldPos, oldPosColour);
 	update_selection_position(position, BLUE);
 	return state;
