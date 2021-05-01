@@ -91,6 +91,96 @@ uint8_t is_mine(int i){
 	return (position_states[i]|3) == 7; //100 | 011 == 111 will tell if we have a mine
 }
 
+
+uint8_t adjacent_mines(int i, uint8_t ree){
+	uint16_t cellsToCheck[8];
+	uint8_t counter = 0;
+
+	int above_left = i-(BOARD_SIZE_X+1); int above = i-BOARD_SIZE_X; int above_right = i-(BOARD_SIZE_X-1);
+	int left = i-1; int right = i + 1;
+	int below_left = i+(BOARD_SIZE_X-1); int below = i+BOARD_SIZE_X; int below_right = i+(BOARD_SIZE_X+1);
+
+	if(i==0){
+		//TOP-LEFT
+		counter = 3;
+		cellsToCheck[0] = right;
+		cellsToCheck[1] = below_right;
+		cellsToCheck[2] = below;
+	} else if (i==BOARD_SIZE_X - 1){
+		//TOP-RIGHT
+		counter = 3;
+		cellsToCheck[0] = left;
+		cellsToCheck[1] = below_left;
+		cellsToCheck[2] = below;
+	} else if (i==(BOARD_SIZE_Y -1) * BOARD_SIZE_X){
+		//BOTTOM-LEFT
+		counter = 3;
+		cellsToCheck[0] = above;
+		cellsToCheck[1] = above_right;
+		cellsToCheck[2] = right;
+	} else if (i==((BOARD_SIZE_Y * BOARD_SIZE_X) - 1)){
+		//BOTTOM-RIGHT
+		counter = 3;
+		cellsToCheck[0] = left;
+		cellsToCheck[1] = above_left;
+		cellsToCheck[2] = above;
+	} else if (i < BOARD_SIZE_X){
+		//TOP row
+		counter = 5;
+		cellsToCheck[0] = left;
+		cellsToCheck[1] = below_left;
+		cellsToCheck[2] = below;
+		cellsToCheck[3] = below_right;
+		cellsToCheck[4] = right;
+	} else if (i >= (BOARD_SIZE_Y - 1) * BOARD_SIZE_X){
+		//Bottom ROw
+		counter = 5;
+		cellsToCheck[0] = left;
+		cellsToCheck[1] = above_left;
+		cellsToCheck[2] = above;
+		cellsToCheck[3] = above_right;
+		cellsToCheck[4] = right;
+	} else if (i % BOARD_SIZE_X == 0){
+		//Left column
+		counter = 5;
+		cellsToCheck[0] = above;
+		cellsToCheck[1] = above_right;
+		cellsToCheck[2] = right;
+		cellsToCheck[3] = below_right;
+		cellsToCheck[4] = below;
+	} else if (i % BOARD_SIZE_X == BOARD_SIZE_X - 1){
+		//Right column
+		counter = 5;
+		cellsToCheck[0] = above;
+		cellsToCheck[1] = above_left;
+		cellsToCheck[2] = left;
+		cellsToCheck[3] = below_left;
+		cellsToCheck[4] = below;
+	} else {
+		//Other cases
+		counter = 8;
+		cellsToCheck[0] = left;
+		cellsToCheck[1] = above_left;
+		cellsToCheck[2] = above;
+		cellsToCheck[3] = above_right;
+		cellsToCheck[4] = right;
+		cellsToCheck[5] = below_right;
+		cellsToCheck[6] = below;
+		cellsToCheck[7] = below_left;
+	}
+
+	uint8_t adjacentCounter = 0;
+	uint16_t cellId;
+	for(uint8_t j = 0; j < counter; j++){
+		cellId = cellsToCheck[j];
+		if(is_mine(cellId)){
+			adjacentCounter++;
+		}
+	}
+
+	return adjacentCounter;
+}
+
 void printCell(int pos){
 	if(is_discovered(pos) && is_mine(pos)){
 		//show red
@@ -141,6 +231,9 @@ void printMines(){
 		if(!is_mine(i)){ // NOT A MINE
 //			display_char('-');
 			fill_rectangle(sqr, WHITE);
+			char out[1];
+			sprintf(out, "%d", adjacent_mines(i,0));
+			display_string_xy(out, sqr.left, sqr.top);
 		} else { //IS A MINE
 //			display_char('x');
 			fill_rectangle(sqr, RED);
