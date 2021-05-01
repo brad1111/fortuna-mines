@@ -5,11 +5,12 @@
 // Cell
 //
 // 8 bit value
-//
-// 0000000x - refers to whether uncovered
-// 000000x0 - refers to whether tagged
-// 00000x00 - refers to whether questioned
-// 0000x000 - refers to whether a mine
+// 00000xxx - means state of object
+// 00000y00 - means it is normal
+// 00000y01 - means it is discovered, discovered + mine = exploded
+// 00000y10 - means it is tagged
+// 00000y11 - means it is questioned
+// 00000x00 - refers to whether a mine (1 means it is )
 
 #define BOARD_SIZE_X 30
 #define BOARD_SIZE_Y 16

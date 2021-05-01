@@ -22,6 +22,7 @@ volatile uint16_t rng_state;
 volatile rectangle selection_position;
 volatile uint8_t position_states[BOARD_ITEMS];
 volatile uint8_t scroll_direction = 0;
+volatile uint8_t game_started = 0;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -64,15 +65,62 @@ uint16_t* generate_mines(uint16_t* disallowed){
 			//Use 0 , because our RNG cant generate 0
 		} while(rngValue == 0);
 
-		position_states[rngValue - 1] = 8;
+		position_states[rngValue - 1] = 4;
 		rngValues[i] = rngValue - 1;
 	}
 	return rngValues;
 }
 
-void printMines(){
-	rectangle sqr = {0,10,0,10};
+uint8_t can_discover(int i){
+	return (position_states[i]|4) == 4; //if we can discover 000 | 100 = 100
+}
+
+uint8_t is_discovered(int i){
+	return (position_states[i]|4) == 5;  //001 | 100 == 101 will tell if discovered
+}
+
+uint8_t is_tagged(int i){
+	return (position_states[i]|4) == 6; //010 | 100 == 110 will tell if we have a tag
+}
+
+uint8_t is_questioned(int i){
+	return (position_states[i]|4) == 7; //011 | 100 == 111 will tell if we have a question
+}
+
+uint8_t is_mine(int i){
+	return (position_states[i]|3) == 7; //100 | 011 == 111 will tell if we have a mine
+}
+
+void printCell(int pos){
+	if(is_discovered(pos) && is_mine(pos)){
+		//show red
+		update_selection_position(pos,RED);
+	} else if (is_discovered(pos)){
+		//show white
+		update_selection_position(pos,WHITE);
+	} else if (is_tagged(pos)){
+		//show magenta
+		update_selection_position(pos,MAGENTA);
+	} else if (is_questioned(pos)){
+		//show yellow
+		update_selection_position(pos,YELLOW);
+	} else {
+		//show grey
+		update_selection_position(pos,GREY);
+	}
+}
+
+
+//Prints the grid as is
+void printGrid(){
 	clear_screen();
+	for(int i = 0; i < BOARD_ITEMS; i++){
+		printCell(i);
+	}
+}
+
+void printMines(){
+	rectangle sqr = {0,10,0,10}; clear_screen();
 	for(int i = 0; i < BOARD_ITEMS; i++){
 		if(i != 0 && i % BOARD_SIZE_X == 0){
 //			display_char('\n');
@@ -90,7 +138,7 @@ void printMines(){
 
 
 		//when m has reached the max, there isn't a mine in this pos
-		if(position_states[i] % 16 == 0){ // NOT A MINE
+		if(!is_mine(i)){ // NOT A MINE
 //			display_char('-');
 			fill_rectangle(sqr, WHITE);
 		} else { //IS A MINE
@@ -100,6 +148,16 @@ void printMines(){
 		//increment for next time
 		sqr.left += 10;
 		sqr.right += 10;
+	}
+}
+
+void discover(){
+	int pos = position;
+	if(is_mine(pos)){
+		//explode
+		game_started = 0;
+	} else if (can_discover(pos)){
+		position_states[pos] |= 1;
 	}
 }
 
@@ -158,15 +216,10 @@ int collect_delta(int state) {
 ////		fill_rectangle(a,GREEN);
 
 	uint16_t oldPosColour;
-	if(position_states[oldPos] % 16 == 0){ //Not a mine
-		oldPosColour = WHITE;
-	} else { //is a mine
-		oldPosColour = RED;
-	}
-	char output[15];
-	sprintf(output,"oldPos:%d\n", oldPos);
+	char output[30];
+	sprintf(output,"stat:%d\npos:%d\n", position_states[position], position);
 	display_string_xy(output, 0, 210);
-	update_selection_position(oldPos, oldPosColour);
+	printCell(oldPos);
 	update_selection_position(position, BLUE);
 	return state;
 }
@@ -192,9 +245,13 @@ int check_switches(int state) {
 
 
 	if (get_switch_press(_BV(SWC))) {
-		uint16_t* mines = generate_mines(NULL);
-		printMines(mines);
-		free(mines);
+		if(!game_started){
+			generate_mines(NULL);
+		    printGrid();
+			game_started = 1;
+		} else {
+			discover();
+		}
 
 	}
 
