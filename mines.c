@@ -19,6 +19,9 @@ int position = 0;
 // Minesweeper stuff
 
 volatile uint16_t rng_state;
+volatile rectangle selection_position;
+volatile uint8_t position_states[BOARD_ITEMS];
+volatile uint8_t scroll_direction = 0;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -35,6 +38,13 @@ uint16_t rng() {
 ** all disallowed values must be one more than they represent
 */
 uint16_t* generate_mines(uint16_t* disallowed){
+
+
+	// clear position_states
+	for(int i = 0; i < BOARD_ITEMS; i++){
+		position_states[i] = 0;
+	}
+
 	uint16_t* rngValues = malloc(MAX_MINES * sizeof(uint16_t));
 
 	for(int i = 0; i < MAX_MINES; i++){
@@ -51,44 +61,77 @@ uint16_t* generate_mines(uint16_t* disallowed){
 				}
 			}
 
+			//Use 0 , because our RNG cant generate 0
 		} while(rngValue == 0);
+
+		position_states[rngValue - 1] = 8;
 		rngValues[i] = rngValue - 1;
 	}
 	return rngValues;
 }
 
-void printMines(uint16_t* mines){
+void printMines(){
+	rectangle sqr = {0,10,0,10};
+	clear_screen();
 	for(int i = 0; i < BOARD_ITEMS; i++){
-		if(i % BOARD_SIZE_X == BOARD_SIZE_X - 1){
-			display_char('\n');
+		if(i != 0 && i % BOARD_SIZE_X == 0){
+//			display_char('\n');
+			sqr.left = 0;
+			sqr.right = 10;
+			sqr.top += 10;
+			sqr.bottom += 10;
 		}
-		int m = 0;
-		for(; m < MAX_MINES; m++){
-			if(mines[m] == i){
-				break;
-			}
+	//	int m = 0;
+//		for(; m < MAX_MINES; m++){
+//			if(mines[m] == i){
+//				break;
+//			}
+//		}
+
+
+		//when m has reached the max, there isn't a mine in this pos
+		if(position_states[i] % 16 == 0){ // NOT A MINE
+//			display_char('-');
+			fill_rectangle(sqr, WHITE);
+		} else { //IS A MINE
+//			display_char('x');
+			fill_rectangle(sqr, RED);
 		}
-		if(m == MAX_MINES){
-			display_char('-');
-		} else {
-			display_char('x');
-		}
+		//increment for next time
+		sqr.left += 10;
+		sqr.right += 10;
 	}
 }
 
+/*
+** Pos is the position of the clickwheel
+*/
+void update_selection_position(int position, uint16_t colour){
+	int x = position % BOARD_SIZE_X;
+	int y = (position / BOARD_SIZE_X) % BOARD_SIZE_Y;
 
+	selection_position.left   = x*10;
+	selection_position.right  =	x*10+10;
+	selection_position.top	  = y*10;
+	selection_position.bottom = y*10+10;
+	fill_rectangle(selection_position, colour);
+}
 
 
 void main(void) {
     os_init();
 
-    os_add_task( blink,            30, 1);
-    os_add_task( collect_delta,   500, 1);
+    os_add_task( blink,            25, 1);
+    os_add_task( collect_delta,   200, 1);
     os_add_task( check_switches,  100, 1);
 	os_add_task( freeram_output,   20, 1);
 //	os_add_task( lose_mem,        250, 1);
 
 	rng_state = 3;
+
+//setup seclection position
+	update_selection_position(0,BLUE);
+
 
     sei();
     for(;;){}
@@ -97,7 +140,28 @@ void main(void) {
 
 
 int collect_delta(int state) {
-	position += os_enc_delta();
+	int oldPos = position;
+	if(scroll_direction == SCROLL_HORIZONTAL){
+		position += os_enc_delta();
+	} else {
+		position += BOARD_SIZE_X * os_enc_delta();
+	}
+
+
+
+////		int left = position * 10;
+////		rectangle a = {left,left+10,0,10} ;
+////		clear_screen();
+////		fill_rectangle(a,GREEN);
+
+	uint16_t oldPosColour;
+	if(position_states[oldPos] % 16 == 0){ //Not a mine
+		oldPosColour = WHITE;
+	} else { //is a mine
+		oldPosColour = RED;
+	}
+	update_selection_position(oldPos, oldPosColour);
+	update_selection_position(position, BLUE);
 	return state;
 }
 
@@ -105,7 +169,7 @@ int collect_delta(int state) {
 int check_switches(int state) {
 
 	if (get_switch_press(_BV(SWN))) {
-			display_string("North\n");
+		scroll_direction = !scroll_direction;
 	}
 
 	if (get_switch_press(_BV(SWE))) {
@@ -113,7 +177,7 @@ int check_switches(int state) {
 	}
 
 	if (get_switch_press(_BV(SWS))) {
-			display_string("South\n");
+		printMines();
 	}
 
 	if (get_switch_press(_BV(SWW))) {
@@ -202,7 +266,7 @@ int blink(int state) {
 int freeram_output (int state){
 	char out[10];
 	sprintf(out, "%d\n", freeRam());
-	display_string_xy(out, 290, 000);
+	display_string_xy(out, 290, 200);
 	if(state == 10){
 		return 0;
 	} else {
