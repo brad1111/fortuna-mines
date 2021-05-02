@@ -11,10 +11,10 @@ build:
         paths:
         - _build/mines.hex
     
-release:
-    image: registry.gitlab.com/gitlab-org/release-cli:latest
-    stage: release
-    dependencies: [build]
-    script:
-        - ls
-        - release-cli --server-url https://git.soton.ac.uk create --name="Continuous" --description "Continuous" --tag-name "${CI_COMMIT_SHA}"
+#release:
+#    image: registry.gitlab.com/gitlab-org/release-cli:latest
+#    stage: release
+#    dependencies: [build]
+#    script:
+#        - ls
+#        - release-cli --server-url https://git.soton.ac.uk create --name="Continuous" #--description "Continuous" --tag-name "${CI_COMMIT_SHA}"
