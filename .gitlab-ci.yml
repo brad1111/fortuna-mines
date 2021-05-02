@@ -15,5 +15,7 @@ release:
     image: registry.gitlab.com/gitlab-org/release-cli:latest
     stage: release
     script:
-        - wget -O ./mines.hex --header "PRIVATE-TOKEN:$CI_JOB_TOKEN" https://git.soton.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/raw/mines.hex?job=build
+        - echo "ID ${CI_PROJECT_ID}"
+        - echo "BRANCH ${CI_COMMIT_BRANCH}"
+        - wget -O ./mines.hex --header "PRIVATE-TOKEN:$TOKEN" https://git.soton.ac.uk/api/v4/projects/$CI_PROJECT_ID/jobs/artifacts/$CI_COMMIT_BRANCH/raw/mines.hex?job=build
         - release-cli --server-url https://git.soton.ac.uk create --name="Continuous"
