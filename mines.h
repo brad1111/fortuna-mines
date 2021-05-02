@@ -20,4 +20,9 @@
 #define SCROLL_HORIZONTAL 0
 #define SCROLL_VERTICAL 1
 
+typedef struct{
+    uint16_t cells[8]; //The cells that are adjacent (up to 8)
+    uint8_t counter; //The number of cells actually adjacent
+} adjCells;
+
 #endif // MINES_H_

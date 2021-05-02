@@ -11,6 +11,7 @@ int collect_delta(int);
 int check_switches(int);
 int freeRam();
 int freeram_output(int);
+adjCells adjacent_cells(int);
 
 
 int position = 0;
@@ -38,8 +39,9 @@ uint16_t rng() {
 ** disallowed is a length 9 array which contains the elements surrounding the players position
 ** all disallowed values must be one more than they represent
 */
-uint16_t* generate_mines(uint16_t* disallowed){
-
+uint16_t* generate_mines(int pos){
+	// get states adjacent to pos
+	adjCells disallowedAdjacent = adjacent_cells(pos);
 
 	// clear position_states
 	for(int i = 0; i < BOARD_ITEMS; i++){
@@ -53,15 +55,24 @@ uint16_t* generate_mines(uint16_t* disallowed){
 		do{
 			rngValue = rng() % BOARD_ITEMS;
 			//check to see if value is in disallowed
+			if(rngValue == pos + 1){//don't put mine on initial place
+				rngValue = 0;
+			}
 			for(int j = 0; j < MAX_MINES; j++){
 				if(rngValue == rngValues[j] + 1 //|| //mine already placed
-//				   (j < 9 && rngValue == disallowed[j])//mine is diallowed
+//				   (j < 9 && rngValue == diVsallowed[j])//mine is diallowed
 				){
 					rngValue = 0;
 					break;
 				}
 			}
 
+			for(int j = 0; j < disallowedAdjacent.counter; j++){ //leave gap around inital placement
+				if(rngValue == disallowedAdjacent.cells[j] + 1){
+					rngValue = 0;
+					break;
+				}
+			}
 			//Use 0 , because our RNG cant generate 0
 		} while(rngValue == 0);
 
@@ -92,91 +103,101 @@ uint8_t is_mine(int i){
 }
 
 
+
 /**
- * i - mine to check
- * clear - clear mines? bool
+ * pos - position you want to get adjacent of
+ * returns - adjCells, cells[8] array of cells, counter (the number of elements in array used)
  */
-uint8_t adjacent_mines(int i, uint8_t clear){
-	uint16_t cellsToCheck[8];
-	uint8_t counter = 0;
+adjCells adjacent_cells(int pos){
 
-	int above_left = i-(BOARD_SIZE_X+1); int above = i-BOARD_SIZE_X; int above_right = i-(BOARD_SIZE_X-1);
-	int left = i-1; int right = i + 1;
-	int below_left = i+(BOARD_SIZE_X-1); int below = i+BOARD_SIZE_X; int below_right = i+(BOARD_SIZE_X+1);
+	adjCells adjacentCells;
 
-	if(i==0){
+	int above_left = pos-(BOARD_SIZE_X+1); int above = pos-BOARD_SIZE_X; int above_right = pos-(BOARD_SIZE_X-1);
+	int left = pos-1; int right = pos + 1;
+	int below_left = pos+(BOARD_SIZE_X-1); int below = pos+BOARD_SIZE_X; int below_right = pos+(BOARD_SIZE_X+1);
+
+	if(pos==0){
 		//TOP-LEFT
-		counter = 3;
-		cellsToCheck[0] = right;
-		cellsToCheck[1] = below_right;
-		cellsToCheck[2] = below;
-	} else if (i==BOARD_SIZE_X - 1){
+		adjacentCells.counter = 3;
+		adjacentCells.cells[0] = right;
+		adjacentCells.cells[1] = below_right;
+		adjacentCells.cells[2] = below;
+	} else if (pos==BOARD_SIZE_X - 1){
 		//TOP-RIGHT
-		counter = 3;
-		cellsToCheck[0] = left;
-		cellsToCheck[1] = below_left;
-		cellsToCheck[2] = below;
-	} else if (i==(BOARD_SIZE_Y -1) * BOARD_SIZE_X){
+		adjacentCells.counter = 3;
+		adjacentCells.cells[0] = left;
+		adjacentCells.cells[1] = below_left;
+		adjacentCells.cells[2] = below;
+	} else if (pos==(BOARD_SIZE_Y -1) * BOARD_SIZE_X){
 		//BOTTOM-LEFT
-		counter = 3;
-		cellsToCheck[0] = above;
-		cellsToCheck[1] = above_right;
-		cellsToCheck[2] = right;
-	} else if (i==((BOARD_SIZE_Y * BOARD_SIZE_X) - 1)){
+		adjacentCells.counter = 3;
+		adjacentCells.cells[0] = above;
+		adjacentCells.cells[1] = above_right;
+		adjacentCells.cells[2] = right;
+	} else if (pos==((BOARD_SIZE_Y * BOARD_SIZE_X) - 1)){
 		//BOTTOM-RIGHT
-		counter = 3;
-		cellsToCheck[0] = left;
-		cellsToCheck[1] = above_left;
-		cellsToCheck[2] = above;
-	} else if (i < BOARD_SIZE_X){
+		adjacentCells.counter = 3;
+		adjacentCells.cells[0] = left;
+		adjacentCells.cells[1] = above_left;
+		adjacentCells.cells[2] = above;
+	} else if (pos < BOARD_SIZE_X){
 		//TOP row
-		counter = 5;
-		cellsToCheck[0] = left;
-		cellsToCheck[1] = below_left;
-		cellsToCheck[2] = below;
-		cellsToCheck[3] = below_right;
-		cellsToCheck[4] = right;
-	} else if (i >= (BOARD_SIZE_Y - 1) * BOARD_SIZE_X){
+		adjacentCells.counter = 5;
+		adjacentCells.cells[0] = left;
+		adjacentCells.cells[1] = below_left;
+		adjacentCells.cells[2] = below;
+		adjacentCells.cells[3] = below_right;
+		adjacentCells.cells[4] = right;
+	} else if (pos >= (BOARD_SIZE_Y - 1) * BOARD_SIZE_X){
 		//Bottom ROw
-		counter = 5;
-		cellsToCheck[0] = left;
-		cellsToCheck[1] = above_left;
-		cellsToCheck[2] = above;
-		cellsToCheck[3] = above_right;
-		cellsToCheck[4] = right;
-	} else if (i % BOARD_SIZE_X == 0){
+		adjacentCells.counter = 5;
+		adjacentCells.cells[0] = left;
+		adjacentCells.cells[1] = above_left;
+		adjacentCells.cells[2] = above;
+		adjacentCells.cells[3] = above_right;
+		adjacentCells.cells[4] = right;
+	} else if (pos % BOARD_SIZE_X == 0){
 		//Left column
-		counter = 5;
-		cellsToCheck[0] = above;
-		cellsToCheck[1] = above_right;
-		cellsToCheck[2] = right;
-		cellsToCheck[3] = below_right;
-		cellsToCheck[4] = below;
-	} else if (i % BOARD_SIZE_X == BOARD_SIZE_X - 1){
+		adjacentCells.counter = 5;
+		adjacentCells.cells[0] = above;
+		adjacentCells.cells[1] = above_right;
+		adjacentCells.cells[2] = right;
+		adjacentCells.cells[3] = below_right;
+		adjacentCells.cells[4] = below;
+	} else if (pos % BOARD_SIZE_X == BOARD_SIZE_X - 1){
 		//Right column
-		counter = 5;
-		cellsToCheck[0] = above;
-		cellsToCheck[1] = above_left;
-		cellsToCheck[2] = left;
-		cellsToCheck[3] = below_left;
-		cellsToCheck[4] = below;
+		adjacentCells.counter = 5;
+		adjacentCells.cells[0] = above;
+		adjacentCells.cells[1] = above_left;
+		adjacentCells.cells[2] = left;
+		adjacentCells.cells[3] = below_left;
+		adjacentCells.cells[4] = below;
 	} else {
 		//Other cases
-		counter = 8;
-		cellsToCheck[0] = left;
-		cellsToCheck[1] = above_left;
-		cellsToCheck[2] = above;
-		cellsToCheck[3] = above_right;
-		cellsToCheck[4] = right;
-		cellsToCheck[5] = below_right;
-		cellsToCheck[6] = below;
-		cellsToCheck[7] = below_left;
+		adjacentCells.counter = 8;
+		adjacentCells.cells[0] = left;
+		adjacentCells.cells[1] = above_left;
+		adjacentCells.cells[2] = above;
+		adjacentCells.cells[3] = above_right;
+		adjacentCells.cells[4] = right;
+		adjacentCells.cells[5] = below_right;
+		adjacentCells.cells[6] = below;
+		adjacentCells.cells[7] = below_left;
 	}
+
+	return adjacentCells;
+}
+
+/**
+ * Gets the value of a cell based on how many adjacent mines
+ */
+uint8_t adjacent_mines(int pos, uint8_t clear){
+	adjCells adjacentCells = adjacent_cells(pos);
 
 	uint8_t adjacentCounter = 0;
 	uint16_t cellId;
-	for(uint8_t j = 0; j < counter; j++){
-		cellId = cellsToCheck[j];
+	for(uint8_t j = 0; j < adjacentCells.counter; j++){
+		cellId = adjacentCells.cells[j];
 		if(is_mine(cellId)){
 			adjacentCounter++;
 		} else if (clear){
@@ -187,6 +208,20 @@ uint8_t adjacent_mines(int i, uint8_t clear){
 	}
 
 	return adjacentCounter;
+}
+
+/*
+** Clears adjacent cells that are 0s
+ */
+void clear_adjacent(int pos){
+	adjCells adjacentCells = adjacent_cells(pos);
+	uint8_t adjacentCounter = 0;
+	uint16_t cellId;
+	for(uint8_t j=0; j < adjacentCells.counter; j++){
+		cellId = adjacentCells.cells[j];
+		discover_pos(cellId);
+		printCell(cellId);
+	}
 }
 
 void printCell(int pos){
@@ -339,6 +374,7 @@ void main(void) {
 //setup seclection position
 	update_selection_position(0,BLUE);
 
+	printGrid();
 
     sei();
     for(;;){}
@@ -397,7 +433,7 @@ int check_switches(int state) {
 
 	if (get_switch_press(_BV(SWC))) {
 		if(!game_started){
-			generate_mines(NULL);
+			generate_mines(position);
 		    printGrid();
 			game_started = 1;
 		} else {
