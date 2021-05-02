@@ -14,7 +14,7 @@ build:
 release:
     image: registry.gitlab.com/gitlab-org/release-cli:latest
     stage: release
-    dependencies: build
+    dependencies: [build]
     script:
         - ls
         - release-cli --server-url https://git.soton.ac.uk create --name="Continuous"
