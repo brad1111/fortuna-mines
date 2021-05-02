@@ -24,6 +24,7 @@ volatile rectangle selection_position;
 volatile uint8_t position_states[BOARD_ITEMS];
 volatile uint8_t scroll_direction = 0;
 volatile uint8_t game_started = 0;
+volatile uint8_t mines_left = 0;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -363,11 +364,10 @@ void update_selection_text(int position){
 void main(void) {
     os_init();
 
-    os_add_task( blink,            25, 1);
+//    os_add_task( blink,            25, 1);
     os_add_task( collect_delta,   200, 1);
     os_add_task( check_switches,  100, 1);
 	os_add_task( freeram_output,   20, 1);
-//	os_add_task( lose_mem,        250, 1);
 
 	rng_state = 3;
 
@@ -470,48 +470,48 @@ int check_switches(int state) {
 
 
 
-int blink(int state) {
-	static int light = 0;
-	uint8_t level;
-
-	if (light < -120) {
-		state = 1;
-	} else if (light > 254) {
-		state = -20;
-	}
-
-
-	/* Compensate somewhat for nonlinear LED
-           output and eye sensitivity:
-        */
-	if (state > 0) {
-		if (light > 40) {
-			state = 2;
-		}
-		if (light > 100) {
-			state = 5;
-		}
-	} else {
-		if (light < 180) {
-			state = -10;
-		}
-		if (light < 30) {
-			state = -5;
-		}
-	}
-	light += state;
-
-	if (light < 0) {
-		level = 0;
-	} else if (light > 255) {
-		level = 255;
-	} else {
-		level = light;
-	}
-
-	os_led_brightness(level);
-	return state;
-}
+//int blink(int state) {
+//	static int light = 0;
+//	uint8_t level;
+//
+//	if (light < -120) {
+//		state = 1;
+//	} else if (light > 254) {
+//		state = -20;
+//	}
+//
+//
+//	/* Compensate somewhat for nonlinear LED
+//           output and eye sensitivity:
+//        */
+//	if (state > 0) {
+//		if (light > 40) {
+//			state = 2;
+//		}
+//		if (light > 100) {
+//			state = 5;
+//		}
+//	} else {
+//		if (light < 180) {
+//			state = -10;
+//		}
+//		if (light < 30) {
+//			state = -5;
+//		}
+//	}
+//	light += state;
+//
+//	if (light < 0) {
+//		level = 0;
+//	} else if (light > 255) {
+//		level = 255;
+//	} else {
+//		level = light;
+//	}
+//
+//	os_led_brightness(level);
+//	return state;
+//}
 
 
 int freeram_output (int state){
