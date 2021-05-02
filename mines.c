@@ -436,6 +436,7 @@ int check_switches(int state) {
 			generate_mines(position);
 		    printGrid();
 			game_started = 1;
+			discover();
 		} else {
 			discover();
 		}
