@@ -92,7 +92,11 @@ uint8_t is_mine(int i){
 }
 
 
-uint8_t adjacent_mines(int i, uint8_t ree){
+/**
+ * i - mine to check
+ * clear - clear mines? bool
+ */
+uint8_t adjacent_mines(int i, uint8_t clear){
 	uint16_t cellsToCheck[8];
 	uint8_t counter = 0;
 
@@ -175,6 +179,10 @@ uint8_t adjacent_mines(int i, uint8_t ree){
 		cellId = cellsToCheck[j];
 		if(is_mine(cellId)){
 			adjacentCounter++;
+		} else if (clear){
+			//will be something we want to update and clear
+			discover_pos(cellId);
+			printCell(cellId);
 		}
 	}
 
@@ -187,7 +195,7 @@ void printCell(int pos){
 		update_selection_position(pos,RED);
 	} else if (is_discovered(pos)){
 		//show white
-		update_selection_position(pos,WHITE);
+		update_selection_text(pos);
 	} else if (is_tagged(pos)){
 		//show magenta
 		update_selection_position(pos,MAGENTA);
@@ -245,12 +253,49 @@ void printMines(){
 }
 
 void discover(){
+	discover_pos(position);
+}
+
+void discover_pos(int pos){
+
+	if (can_discover(pos)){
+		if(is_mine(pos)){
+			//explode
+			game_started = 0;
+			display_string_xy("Game Over!", 160, 120);
+		} else {
+			position_states[pos] |= 1;
+			uint8_t value = adjacent_mines(pos,0);
+			if(value == 0){
+				//actually clear, yes this is not ideal
+				adjacent_mines(pos,1);
+			}
+		}
+	}
+}
+
+void tag(){
 	int pos = position;
-	if(is_mine(pos)){
-		//explode
-		game_started = 0;
+	if(is_tagged(pos)){
+		//untag
+		position_states[pos] &= (255-3); //Just get rid of the tag
+	} else if(is_questioned(pos)){
+		//convert to tag
+		position_states[pos] &= (255-1); //just get rid of final bit
 	} else if (can_discover(pos)){
-		position_states[pos] |= 1;
+		//tag it
+		position_states[pos] |= 2;
+	}
+}
+
+void question(){
+	int pos = position;
+	if(is_questioned(pos)){
+		//unquestion
+		position_states[pos] &= (255-3); //get rid of question
+	} else if(can_discover(pos) || is_tagged(pos)){
+		//make pos
+		position_states[pos] |= 3; //question is one bit higher than tag
 	}
 }
 
@@ -266,6 +311,17 @@ void update_selection_position(int position, uint16_t colour){
 	selection_position.top	  = y*10;
 	selection_position.bottom = y*10+10;
 	fill_rectangle(selection_position, colour);
+}
+
+
+char selection_text[2];
+void update_selection_text(int position){
+	update_selection_position(position, WHITE);
+	uint8_t val = adjacent_mines(position,0);
+	if(val != 0){
+		sprintf(selection_text, "%d", adjacent_mines(position,0));
+		display_string_xy(selection_text, selection_position.left, selection_position.top);
+	}
 }
 
 
@@ -300,6 +356,8 @@ int collect_delta(int state) {
 
 	if (position < 0){
 		position = BOARD_ITEMS - position;
+	} else if (position > BOARD_ITEMS){
+		position = position % BOARD_ITEMS;
 	}
 
 
@@ -325,7 +383,7 @@ int check_switches(int state) {
 	}
 
 	if (get_switch_press(_BV(SWE))) {
-			display_string("East\n");
+		question();
 	}
 
 	if (get_switch_press(_BV(SWS))) {
@@ -333,7 +391,7 @@ int check_switches(int state) {
 	}
 
 	if (get_switch_press(_BV(SWW))) {
-			display_string("West\n");
+		tag();
 	}
 
 
@@ -348,25 +406,25 @@ int check_switches(int state) {
 
 	}
 
-	if (get_switch_rpt(_BV(SWN))) {
-			display_string("[R] North\n");
-	}
-
-	if (get_switch_rpt(_BV(SWE))) {
-			display_string("[R] East\n");
-	}
-
-	if (get_switch_rpt(_BV(SWS))) {
-			display_string("[R] South\n");
-	}
-
-	if (get_switch_rpt(_BV(SWW))) {
-			display_string("[R] West\n");
-	}
-
-	if (get_switch_rpt(SWN)) {
-			display_string("[R] North\n");
-	}
+//	if (get_switch_rpt(_BV(SWN))) {
+//			display_string("[R] North\n");
+//	}
+//
+//	if (get_switch_rpt(_BV(SWE))) {
+//			display_string("[R] East\n");
+//	}
+//
+//	if (get_switch_rpt(_BV(SWS))) {
+//			display_string("[R] South\n");
+//	}
+//
+//	if (get_switch_rpt(_BV(SWW))) {
+//			display_string("[R] West\n");
+//	}
+//
+//	if (get_switch_rpt(SWN)) {
+//			display_string("[R] North\n");
+//	}
 
 
 	return state;
