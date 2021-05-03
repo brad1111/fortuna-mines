@@ -211,6 +211,35 @@ uint8_t adjacent_mines(int pos, uint8_t clear){
 	return adjacentCounter;
 }
 
+/**
+ * If the no of adjacent mines tagged equals adjacent mines then sweep
+ */
+void sweep_adjacent(int pos){
+	adjCells adjacentCells = adjacent_cells(pos);
+	uint8_t mine_counter = 0;
+	uint8_t tag_counter = 0;
+	uint16_t cellId;
+
+	for(uint8_t j = 0; j < adjacentCells.counter; j++){
+		cellId = adjacentCells.cells[j];
+		if(is_mine(cellId)){
+			mine_counter++;
+		}
+		if(is_tagged(cellId)){
+			tag_counter++;
+		}
+	}
+
+	if(mine_counter == tag_counter){
+		for(uint8_t j = 0; j < adjacentCells.counter; j++){
+			cellId = adjacentCells.cells[j];
+			discover_pos(cellId);
+			printCell(cellId);
+		}
+	}
+}
+
+
 /*
 ** Clears adjacent cells that are 0s
  */
@@ -441,6 +470,11 @@ int check_switches(int state) {
 			discover();
 		}
 
+	}
+
+	if (get_switch_rpt(_BV(SWC))) {
+		//Sweep
+		sweep_adjacent(position);
 	}
 
 //	if (get_switch_rpt(_BV(SWN))) {
