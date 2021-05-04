@@ -12,6 +12,7 @@ int check_switches(int);
 int freeRam();
 int freeram_output(int);
 adjCells adjacent_cells(int);
+uint8_t is_mine(int);
 
 
 int position = 0;
@@ -24,7 +25,8 @@ volatile rectangle selection_position;
 volatile uint8_t position_states[BOARD_ITEMS];
 volatile uint8_t scroll_direction = 0;
 volatile uint8_t game_started = 0;
-volatile uint8_t mines_left = 0;
+volatile uint8_t mines_untagged= 0;
+volatile uint8_t cells_tagged = 0;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -40,7 +42,7 @@ uint16_t rng() {
 ** disallowed is a length 9 array which contains the elements surrounding the players position
 ** all disallowed values must be one more than they represent
 */
-uint16_t* generate_mines(int pos){
+void generate_mines(int pos){
 	// get states adjacent to pos
 	adjCells disallowedAdjacent = adjacent_cells(pos);
 
@@ -48,8 +50,6 @@ uint16_t* generate_mines(int pos){
 	for(int i = 0; i < BOARD_ITEMS; i++){
 		position_states[i] = 0;
 	}
-
-	uint16_t* rngValues = malloc(MAX_MINES * sizeof(uint16_t));
 
 	for(int i = 0; i < MAX_MINES; i++){
 		uint16_t rngValue = 0;
@@ -60,7 +60,7 @@ uint16_t* generate_mines(int pos){
 				rngValue = 0;
 			}
 			for(int j = 0; j < MAX_MINES; j++){
-				if(rngValue == rngValues[j] + 1 //|| //mine already placed
+				if(is_mine(rngValue - 1) //|| //mine already placed
 //				   (j < 9 && rngValue == diVsallowed[j])//mine is diallowed
 				){
 					rngValue = 0;
@@ -78,9 +78,17 @@ uint16_t* generate_mines(int pos){
 		} while(rngValue == 0);
 
 		position_states[rngValue - 1] = 4;
-		rngValues[i] = rngValue - 1;
 	}
-	return rngValues;
+}
+
+uint16_t noOfMines(){
+	uint16_t mineCount = 0;
+	for(uint16_t i = 0; i < BOARD_ITEMS; i++){
+		if(is_mine(i)){
+			mineCount++;
+		}
+	}
+	return mineCount;
 }
 
 uint8_t can_discover(int i){
@@ -280,6 +288,7 @@ void printGrid(){
 	for(int i = 0; i < BOARD_ITEMS; i++){
 		printCell(i);
 	}
+	printMinesLeft();
 }
 
 void printMines(){
@@ -317,6 +326,27 @@ void printMines(){
 	}
 }
 
+/**
+ * Prints no of mines left to sweep
+ */
+void printMinesLeft(){
+	char out[6];
+	sprintf(out, "min%2d", mines_untagged);
+	display_string_xy(out,160,200);
+	sprintf(out, "cel%2d", cells_tagged);
+	display_string_xy(out,160,220);
+
+}
+
+void untag(int pos){
+	if(is_mine(pos)){
+		mines_untagged++;
+	}
+	cells_tagged--;
+	position_states[pos] &= (255-3); //Just get rid of the tag
+	printMinesLeft();
+}
+
 void discover(){
 	discover_pos(position);
 }
@@ -343,13 +373,28 @@ void tag(){
 	int pos = position;
 	if(is_tagged(pos)){
 		//untag
-		position_states[pos] &= (255-3); //Just get rid of the tag
+		untag(pos);
+		return;
 	} else if(is_questioned(pos)){
 		//convert to tag
 		position_states[pos] &= (255-1); //just get rid of final bit
 	} else if (can_discover(pos)){
 		//tag it
 		position_states[pos] |= 2;
+	}
+
+	//check to see if we need to update tag counter
+	if(is_mine(pos)){
+		mines_untagged--;
+	}
+	cells_tagged++;
+	printMinesLeft();
+
+	//check to see if this will win the game
+	if(mines_untagged == 0 && cells_tagged == MAX_MINES){
+		//win
+		game_started = 0;
+		display_string_xy("Win", 160, 120);
 	}
 }
 
@@ -360,6 +405,7 @@ void question(){
 		position_states[pos] &= (255-3); //get rid of question
 	} else if(can_discover(pos) || is_tagged(pos)){
 		//make pos
+		untag(pos);
 		position_states[pos] |= 3; //question is one bit higher than tag
 	}
 }
@@ -426,11 +472,6 @@ int collect_delta(int state) {
 	}
 
 
-////		int left = position * 10;
-////		rectangle a = {left,left+10,0,10} ;
-////		clear_screen();
-////		fill_rectangle(a,GREEN);
-
 	uint16_t oldPosColour;
 	char output[30];
 	sprintf(output,"stat:%d\npos:%d\n", position_states[position], position);
@@ -465,6 +506,8 @@ int check_switches(int state) {
 			generate_mines(position);
 		    printGrid();
 			game_started = 1;
+			mines_untagged = MAX_MINES;
+			cells_tagged = 0;
 			discover();
 		} else {
 			discover();
@@ -500,53 +543,6 @@ int check_switches(int state) {
 
 	return state;
 }
-
-
-
-
-//int blink(int state) {
-//	static int light = 0;
-//	uint8_t level;
-//
-//	if (light < -120) {
-//		state = 1;
-//	} else if (light > 254) {
-//		state = -20;
-//	}
-//
-//
-//	/* Compensate somewhat for nonlinear LED
-//           output and eye sensitivity:
-//        */
-//	if (state > 0) {
-//		if (light > 40) {
-//			state = 2;
-//		}
-//		if (light > 100) {
-//			state = 5;
-//		}
-//	} else {
-//		if (light < 180) {
-//			state = -10;
-//		}
-//		if (light < 30) {
-//			state = -5;
-//		}
-//	}
-//	light += state;
-//
-//	if (light < 0) {
-//		level = 0;
-//	} else if (light > 255) {
-//		level = 255;
-//	} else {
-//		level = light;
-//	}
-//
-//	os_led_brightness(level);
-//	return state;
-//}
-
 
 int freeram_output (int state){
 	char out[10];
