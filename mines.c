@@ -27,6 +27,7 @@ volatile uint8_t scroll_direction = 0;
 volatile uint8_t game_started = 0;
 volatile uint8_t mines_untagged= 0;
 volatile uint8_t cells_tagged = 0;
+volatile uint16_t cells_discovered = 0;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -330,11 +331,14 @@ void printMines(){
  * Prints no of mines left to sweep
  */
 void printMinesLeft(){
-	char out[6];
-	sprintf(out, "min%2d", mines_untagged);
+	char out[10];
+	sprintf(out, "mines:%2d", mines_untagged);
 	display_string_xy(out,160,200);
-	sprintf(out, "cel%2d", cells_tagged);
+	sprintf(out, "tags:%2d", cells_tagged);
+	display_string_xy(out,160,210);
+	sprintf(out, "clr:%2d", cells_discovered);
 	display_string_xy(out,160,220);
+
 
 }
 
@@ -351,6 +355,11 @@ void discover(){
 	discover_pos(position);
 }
 
+void win(){
+		game_started = 0;
+		display_string_xy("Win", 160, 120);
+}
+
 void discover_pos(int pos){
 
 	if (can_discover(pos)){
@@ -364,6 +373,10 @@ void discover_pos(int pos){
 			if(value == 0){
 				//actually clear, yes this is not ideal
 				adjacent_mines(pos,1);
+			}
+			cells_discovered++;
+			if(cells_discovered == BOARD_ITEMS - MAX_MINES){
+				win();
 			}
 		}
 	}
@@ -392,9 +405,7 @@ void tag(){
 
 	//check to see if this will win the game
 	if(mines_untagged == 0 && cells_tagged == MAX_MINES){
-		//win
-		game_started = 0;
-		display_string_xy("Win", 160, 120);
+		win();
 	}
 }
 
