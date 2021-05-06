@@ -20,7 +20,7 @@ int position = 0;
 
 // Minesweeper stuff
 
-volatile uint16_t rng_state;
+volatile uint16_t rng_state = 0;
 volatile rectangle selection_position;
 volatile uint8_t position_states[BOARD_ITEMS];
 volatile uint8_t scroll_direction = 0;
@@ -38,6 +38,7 @@ uint16_t rng() {
     rng_state = x;
 	return x;
 }
+
 
 /*
 ** disallowed is a length 9 array which contains the elements surrounding the players position
@@ -455,10 +456,30 @@ void main(void) {
     os_add_task( check_switches,  100, 1);
 	os_add_task( freeram_output,   20, 1);
 
-	rng_state = 3;
 
 //setup seclection position
 	update_selection_position(0,BLUE);
+
+//	//setup clock prescaler for rng seed (CSN12 and CSN10 for /1024 prescaler)
+//	TCCR1B |= 4;
+
+	//setup watchdog interrupt so we can get a TRNG value to give as seed for PRNG
+
+//	//clear watchdog timer
+//	MCUSR &= ~(1<<)
+//
+//	//write logical 1 to both WDCE and WDE
+//	WDTCSR |= (1<<WDCE) | (1<<WDE);
+//
+//	//disable WD timer
+//
+//	WDTCSR = 0x00;
+//
+//	//enable WD timer with Change enable WDCE and WDIE (interrupt enable) and prescaler to ~1s
+//	WDTCSR |= (1<<WDCE) | (1<<WDIE) | (1<<WDP2) | (1<<WDP1);
+
+	//Enable ADC and start conversion
+	ADCSRA |= (1<<ADEN) | (1<<ADSC);
 
 	printGrid();
 
@@ -485,7 +506,7 @@ int collect_delta(int state) {
 
 	uint16_t oldPosColour;
 	char output[30];
-	sprintf(output,"stat:%d\npos:%d\n", position_states[position], position);
+	sprintf(output,"stat:%d\npos:%d\nrng:%d;%d", position_states[position], position, ADCL,ADCH);
 	display_string_xy(output, 0, 210);
 	printCell(oldPos);
 	update_selection_position(position, BLUE);
@@ -514,6 +535,12 @@ int check_switches(int state) {
 
 	if (get_switch_press(_BV(SWC))) {
 		if(!game_started){
+			//setup seed based on time to press the first button
+			if(rng_state == 0){
+				rng_state = TCNT1L;
+				TCCR1B &= ~4;
+			}
+
 			generate_mines(position);
 		    printGrid();
 			game_started = 1;
