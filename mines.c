@@ -3,6 +3,7 @@
 #include "os.h"
 #include "mines.h"
 #include <stdlib.h>
+#include <avr/eeprom.h>
 
 
 int blink(int);
@@ -21,6 +22,7 @@ int position = 0;
 // Minesweeper stuff
 
 volatile uint16_t rng_state = 0;
+static uint16_t EEMEM RNG_STATE;
 volatile rectangle selection_position;
 volatile uint8_t position_states[BOARD_ITEMS];
 volatile uint8_t scroll_direction = 0;
@@ -28,6 +30,7 @@ volatile uint8_t game_started = 0;
 volatile uint8_t mines_untagged= 0;
 volatile uint8_t cells_tagged = 0;
 volatile uint16_t cells_discovered = 0;
+volatile uint16_t rng_count = 0;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -36,6 +39,7 @@ uint16_t rng() {
     x ^= x >> 9;
     x ^= x << 8;
     rng_state = x;
+	//writes to EEPROM in generate mines to decrease wear on EEPROm
 	return x;
 }
 
@@ -81,6 +85,9 @@ void generate_mines(int pos){
 
 		position_states[rngValue - 1] = 4;
 	}
+	//update eeprom RNG
+	eeprom_update_word(&RNG_STATE, rng_state);
+	rng_count++;
 }
 
 uint16_t noOfMines(){
@@ -479,7 +486,11 @@ void main(void) {
 //	WDTCSR |= (1<<WDCE) | (1<<WDIE) | (1<<WDP2) | (1<<WDP1);
 
 	//Enable ADC and start conversion
-	ADCSRA |= (1<<ADEN) | (1<<ADSC);
+//	ADCSRA |= (1<<ADEN) | (1<<ADSC);
+
+	//random seed inspired from https://www.avrfreaks.net/forum/random-number-generation-0
+
+	rng_state = eeprom_read_word(&RNG_STATE);
 
 	printGrid();
 
@@ -506,7 +517,7 @@ int collect_delta(int state) {
 
 	uint16_t oldPosColour;
 	char output[30];
-	sprintf(output,"stat:%d\npos:%d\nrng:%d;%d", position_states[position], position, ADCL,ADCH);
+	sprintf(output,"stat:%d\npos:%d\nrng:%d;%d", position_states[position], position, rng_state, rng_count);
 	display_string_xy(output, 0, 210);
 	printCell(oldPos);
 	update_selection_position(position, BLUE);
@@ -537,8 +548,7 @@ int check_switches(int state) {
 		if(!game_started){
 			//setup seed based on time to press the first button
 			if(rng_state == 0){
-				rng_state = TCNT1L;
-				TCCR1B &= ~4;
+				rng_state = 0x0bae;
 			}
 
 			generate_mines(position);
