@@ -20,9 +20,13 @@
 #define SCROLL_HORIZONTAL 0
 #define SCROLL_VERTICAL 1
 
+#define MAX_LETTERS_IN_MENU 20
+#define LETTER_HEIGHT_IN_MENU 10
+
 typedef struct{
     uint16_t cells[8]; //The cells that are adjacent (up to 8)
     uint8_t counter; //The number of cells actually adjacent
 } adjCells;
 
+typedef void (*FuncPointer)(void);
 #endif // MINES_H_

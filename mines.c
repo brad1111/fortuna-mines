@@ -14,9 +14,15 @@ int freeRam();
 int freeram_output(int);
 adjCells adjacent_cells(int);
 uint8_t is_mine(int);
+void printMenu(char*,char*,uint8_t);
+void setup_game();
 
 
 int position = 0;
+uint8_t menuPosition = 0;
+uint8_t menuEntries = 0;
+FuncPointer* menuChoices;
+uint8_t inMenu = 0;
 
 
 // Minesweeper stuff
@@ -341,11 +347,11 @@ void printMines(){
 void printMinesLeft(){
 	char out[10];
 	sprintf(out, "mines:%2d", mines_untagged);
-	display_string_xy(out,160,200);
+	display_string_xy(out,140,200);
 	sprintf(out, "tags:%2d", cells_tagged);
-	display_string_xy(out,160,210);
+	display_string_xy(out,140,210);
 	sprintf(out, "clr:%2d", cells_discovered);
-	display_string_xy(out,160,220);
+	display_string_xy(out,140,220);
 
 
 }
@@ -365,7 +371,7 @@ void discover(){
 
 void win(){
 		game_started = 0;
-		display_string_xy("Win", 160, 120);
+		display_string_xy("Win", 140, 120);
 }
 
 void discover_pos(int pos){
@@ -374,7 +380,7 @@ void discover_pos(int pos){
 		if(is_mine(pos)){
 			//explode
 			game_started = 0;
-			display_string_xy("Game Over!", 160, 120);
+			display_string_xy("Game Over!", 140, 120);
 		} else {
 			position_states[pos] |= 1;
 			uint8_t value = adjacent_mines(pos,0);
@@ -454,6 +460,11 @@ void update_selection_text(int position){
 	}
 }
 
+void empty(void){
+	//do something so that this doesn't get optimised out?
+	menuPosition = 0;
+}
+
 
 void main(void) {
     os_init();
@@ -492,7 +503,22 @@ void main(void) {
 
 	rng_state = eeprom_read_word(&RNG_STATE);
 
-	printGrid();
+//	printGrid();
+
+	char arr[3][MAX_LETTERS_IN_MENU] = {
+	" ",
+	"Play (99 mines)",
+	"Instructions"
+	};
+	inMenu = 1;
+	FuncPointer menuChoicesLocal[3] = {
+	*empty,
+	*setup_game,
+	*empty
+    };
+	menuChoices = menuChoicesLocal;
+	printMenu("a",arr,3);
+	display_string_xy(arr[2],100,10);
 
     sei();
     for(;;){}
@@ -500,27 +526,50 @@ void main(void) {
 }
 
 
+void setup_game(void){
+	//setup seed based on time to press the first button
+	if(rng_state == 0){
+		rng_state = 0x0bae;
+	}
+
+	generate_mines(position);
+    printGrid();
+	game_started = 1;
+	inMenu = 0;
+	mines_untagged = MAX_MINES;
+	cells_tagged = 0;
+	discover();
+}
+
 int collect_delta(int state) {
-	int oldPos = position % BOARD_ITEMS;
-	if(scroll_direction == SCROLL_HORIZONTAL){
-		position += os_enc_delta();
+	if(!inMenu){
+		//in game
+		int oldPos = position % BOARD_ITEMS;
+		if(scroll_direction == SCROLL_HORIZONTAL){
+			position += os_enc_delta();
+		} else {
+			position += BOARD_SIZE_X * os_enc_delta();
+		}
+
+		if (position < 0){
+			position = BOARD_ITEMS - position;
+		} else if (position > BOARD_ITEMS){
+			position = position % BOARD_ITEMS;
+		}
+
+
+		uint16_t oldPosColour;
+		char output[30];
+		sprintf(output,"stat:%d\npos:%d\nrng:%d;%d", position_states[position], position, rng_state, rng_count);
+		display_string_xy(output, 0, 210);
+		printCell(oldPos);
+		update_selection_position(position, BLUE);
 	} else {
-		position += BOARD_SIZE_X * os_enc_delta();
+		//in menu
+		uint8_t oldPos = menuPosition;
+		menuPosition = (menuPosition + os_enc_delta()) % menuEntries;
+		printMenuSelected(oldPos, menuPosition);
 	}
-
-	if (position < 0){
-		position = BOARD_ITEMS - position;
-	} else if (position > BOARD_ITEMS){
-		position = position % BOARD_ITEMS;
-	}
-
-
-	uint16_t oldPosColour;
-	char output[30];
-	sprintf(output,"stat:%d\npos:%d\nrng:%d;%d", position_states[position], position, rng_state, rng_count);
-	display_string_xy(output, 0, 210);
-	printCell(oldPos);
-	update_selection_position(position, BLUE);
 	return state;
 }
 
@@ -528,35 +577,36 @@ int collect_delta(int state) {
 int check_switches(int state) {
 
 	if (get_switch_press(_BV(SWN))) {
-		scroll_direction = !scroll_direction;
+		if(!inMenu){
+			scroll_direction = !scroll_direction;
+		}
 	}
 
 	if (get_switch_press(_BV(SWE))) {
-		question();
+		if(!inMenu){
+			question();
+		}
 	}
 
 	if (get_switch_press(_BV(SWS))) {
-		printMines();
+		if(!inMenu){
+			//TODO put up a menu here
+			printMines();
+		}
 	}
 
 	if (get_switch_press(_BV(SWW))) {
-		tag();
+		if(!inMenu){
+			tag();
+		}
 	}
 
 
 	if (get_switch_press(_BV(SWC))) {
-		if(!game_started){
-			//setup seed based on time to press the first button
-			if(rng_state == 0){
-				rng_state = 0x0bae;
+		if(inMenu){
+			if(menuPosition >= 0 && menuPosition < menuEntries){
+				(*menuChoices[menuPosition])();
 			}
-
-			generate_mines(position);
-		    printGrid();
-			game_started = 1;
-			mines_untagged = MAX_MINES;
-			cells_tagged = 0;
-			discover();
 		} else {
 			discover();
 		}
@@ -590,6 +640,32 @@ int check_switches(int state) {
 
 
 	return state;
+}
+
+
+
+/**
+ * Prints a menu based on inputs
+ */
+void printMenu(char* title, char *lines, uint8_t menu_entries){
+	display_string_xy(title, 140,0);
+
+	menuEntries = menu_entries;
+	uint8_t offset = (22 - menu_entries) / 2;
+	for(uint8_t i = 0; i < menu_entries; i++){
+		display_string_xy(lines+MAX_LETTERS_IN_MENU*i, 140, LETTER_HEIGHT_IN_MENU * (offset + i));
+		if(menuPosition == i){
+			printMenuSelected(i,i);
+		}
+	}
+
+}
+
+
+void printMenuSelected(uint8_t old_pos, uint8_t new_pos){
+	uint8_t offset = (22 - menuEntries) / 2;
+	display_string_xy(" ", 130, 10 * (offset + old_pos));
+	display_string_xy("*", 130, 10 * (offset + new_pos));
 }
 
 int freeram_output (int state){
