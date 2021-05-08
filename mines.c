@@ -1,9 +1,5 @@
-/* COMP2215 Task 5---SKELETON */
-
-#include "os.h"
+/* Loosly Based on COMP2215 Task 5---SKELETON */
 #include "mines.h"
-#include <stdlib.h>
-#include <avr/eeprom.h>
 
 
 int blink(int);
@@ -467,7 +463,13 @@ void empty(void){
 
 
 void main(void) {
-    os_init();
+    /* 8MHz clock, no prescaling (DS, p. 48) */
+    CLKPR = (1 << CLKPCE);
+    CLKPR = 0;
+
+    init_lcd();
+    os_init_scheduler();
+    os_init_ruota();
 
 //    os_add_task( blink,            25, 1);
     os_add_task( collect_delta,   200, 1);
@@ -617,27 +619,6 @@ int check_switches(int state) {
 		//Sweep
 		sweep_adjacent(position);
 	}
-
-//	if (get_switch_rpt(_BV(SWN))) {
-//			display_string("[R] North\n");
-//	}
-//
-//	if (get_switch_rpt(_BV(SWE))) {
-//			display_string("[R] East\n");
-//	}
-//
-//	if (get_switch_rpt(_BV(SWS))) {
-//			display_string("[R] South\n");
-//	}
-//
-//	if (get_switch_rpt(_BV(SWW))) {
-//			display_string("[R] West\n");
-//	}
-//
-//	if (get_switch_rpt(SWN)) {
-//			display_string("[R] North\n");
-//	}
-
 
 	return state;
 }

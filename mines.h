@@ -1,3 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/eeprom.h>
+#include "lcd.h"
+#include "rios.h"
+#include "ruota.h"
+
 #ifndef MINES_H_
 #define MINES_H_
 
