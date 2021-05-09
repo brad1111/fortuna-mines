@@ -68,7 +68,7 @@ static uint16_t EEMEM RNG_STATE;
 volatile rectangle selection_position;
 volatile uint8_t position_states[BOARD_ITEMS];
 volatile uint8_t scroll_direction = 0;
-volatile uint8_t game_started = 0;
+volatile uint8_t game_state = GAME_STATE_NONE;
 volatile uint8_t mines_untagged= 0;
 volatile uint8_t cells_tagged = 0;
 volatile uint16_t cells_discovered = 0;
@@ -313,7 +313,11 @@ void clear_adjacent(int pos){
 }
 
 void printCell(int pos){
-	if(is_discovered(pos) && is_mine(pos)){
+	if(game_state == GAME_STATE_STARTING){
+		//show grey
+		update_selection_position(pos,GREY);
+	}
+	else if(game_state == GAME_STATE_ENDED && is_mine(pos)){
 		//show red
 		update_selection_position(pos,RED);
 	} else if (is_discovered(pos)){
@@ -415,9 +419,22 @@ void discover(){
 	discover_pos(position);
 }
 
+#define GAME_OVER_MENU_ITEMS_COUNT 4
+void gameOverCommon(char* title){
+	game_state = GAME_STATE_ENDED;
+	menuStatus = MENU_GAMEOVER;
+	char items[GAME_OVER_MENU_ITEMS_COUNT][MAX_LETTERS_IN_MENU] = {
+	" ",
+	"New Game",
+	"View Board",
+	"Main Menu"
+    };
+	clear_screen();
+	printMenu(title, (char*) items, GAME_OVER_MENU_ITEMS_COUNT);
+}
+
 void win(){
-		game_started = 0;
-		display_string_xy("Win", 140, 120);
+		gameOverCommon("You won!");
 }
 
 void discover_pos(int pos){
@@ -425,8 +442,7 @@ void discover_pos(int pos){
 	if (can_discover(pos)){
 		if(is_mine(pos)){
 			//explode
-			game_started = 0;
-			display_string_xy("Game Over!", 140, 120);
+			gameOverCommon("Game over!");
 		} else {
 			position_states[pos] |= 1;
 			uint8_t value = adjacent_mines(pos,0);
@@ -594,9 +610,6 @@ void main_menu(){
 }
 
 
-void setup_game(void){
-}
-
 int collect_delta(int state) {
 	if(!menuStatus){
 		//in game
@@ -664,15 +677,15 @@ int check_switches(int state) {
 	if (get_switch_press(_BV(SWC))) {
 		switch (menuStatus) {
 			case MENU_NONE:
-				if(!game_started){
+				if(game_state == GAME_STATE_STARTING){
 					//setup seed based on time to press the first button
 					if(rng_state == 0){
 						rng_state = 0x0bae;
 					}
 
 					generate_mines(position);
+					game_state = GAME_STATE_STARTED;
 					printGrid();
-					game_started = 1;
 					mines_untagged = MAX_MINES;
 					cells_tagged = 0;
 				}
@@ -681,11 +694,34 @@ int check_switches(int state) {
 			case MENU_START:
 				switch (menuPosition) {
 					case 1:
+						//99 mines
 						menuStatus = 0;
+						game_state = GAME_STATE_STARTING;
 						printGrid();
 						break;
 					case 2:
 						instructions();
+						break;
+					default:
+						break;
+				}
+				break;
+			case MENU_GAMEOVER:
+				switch (menuPosition) {
+					case 1:
+						//New game
+						game_state = GAME_STATE_STARTING;
+						menuStatus = 0;
+						printGrid();
+						break;
+					case 2:
+						//View board
+						clear_screen();
+						printGrid();
+						break;
+					case 3:
+						//Main menu
+						main_menu();
 						break;
 					default:
 						break;
@@ -703,9 +739,9 @@ int check_switches(int state) {
 
 	if (get_switch_rpt(_BV(SWC))) {
 		//Sweep
-//		if(!menuStatus && cells_discovered){
-//			sweep_adjacent(position);
-//		}
+		if(!menuStatus && cells_discovered){
+			sweep_adjacent(position);
+		}
 	}
 
 	return state;
