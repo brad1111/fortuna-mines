@@ -16,9 +16,9 @@
             "-Winline",
             "-o",
             "_build/main.o",
-            "main.c"
+            "mines.c"
         ],
         "directory": "/home/bradley/src/c/fortuna-mines",
-        "file": "t01sk.c"
+        "file": "mines.c"
     }
 ]
