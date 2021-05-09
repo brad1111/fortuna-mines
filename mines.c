@@ -428,17 +428,16 @@ void discover(){
 	discover_pos(position);
 }
 
-#define GAME_OVER_MENU_ITEMS_COUNT 4
+#define GAME_OVER_MENU_ITEMS_COUNT 3
 void gameOverCommon(char* title){
 	game_state = GAME_STATE_ENDED;
 	menuStatus = MENU_GAMEOVER;
 	char items[GAME_OVER_MENU_ITEMS_COUNT][MAX_LETTERS_IN_MENU] = {
-	" ",
 	"New Game",
 	"View Board",
 	"Main Menu"
     };
-//	clear_screen();
+	clear_screen();
 	printMenu(title, (char*) items, GAME_OVER_MENU_ITEMS_COUNT);
 }
 
@@ -460,7 +459,7 @@ void discover_pos(int pos){
 				adjacent_mines(pos,1);
 			}
 			cells_discovered++;
-			if(cells_discovered == BOARD_ITEMS - MAX_MINES){
+			if(cells_discovered == (uint8_t) (BOARD_ITEMS - MAX_MINES)){
 				win();
 			}
 		}
@@ -533,26 +532,34 @@ void update_selection_text(int position){
 	}
 }
 
-
 void instructions(){
 	menuStatus = MENU_INSTRUCTIONS;
 	clear_screen();
-	char out[50];
-	sprintf(out, "Spinning the wheel moves left/right or\n");
-	display_string(out);
-	sprintf(out, " up/down depending on mode.\n");
-	display_string(out);
-	sprintf(out, "Default is left/right.\n");
-	display_string(out);
-	sprintf(out, "You can toggle between modes using up.\n");
-	display_string(out);
-	sprintf(out, "Center button clears a cell, long press sweeps\n");
-	display_string(out);
-	sprintf(out, "Left tags as a mine, right is a question tag.\n");
-	display_string(out);
-	sprintf(out, "Down displays pause menu.\n\n");
-	display_string(out);
-	sprintf(out, "Press center to return.");
+	display_string_xy("Instructions:\n",140,0);
+	display_string("Controls: \n\n");
+	display_string("Move left/right or up/down:\n");
+	display_string("- Spin wheel (depends on movement direction)\n");
+	display_string("Discover selected cell:\n");
+	display_string("- Centre button\n");
+	display_string("Toggle movement direction: \n");
+	display_string("- Up button\n");
+	display_string("- Toggles between left/right or up/down movement\n");
+	display_string("Tag cell: \n");
+	display_string("- Left button\n");
+	display_string("Question cell: \n");
+	display_string("- Right button\n");
+	display_string("Pause: \n");
+	display_string("- Right button\n");
+	display_string("\nScreen elements: \n\n");
+	display_string("- Grey square: undiscovered\n");
+	display_string("- Red square: exploded mine\n");
+	display_string("- White or numbered square: discovered\n");
+	display_string("- Pink square: tagged\n");
+	display_string("- Yellow square: questioned\n");
+	display_string("\nGoal: \n");
+	display_string("Clear the board or tag all mines, without exploding any mines\n");
+	display_string("\nPress centre button to go back...");
+
 }
 
 void main(void) {
@@ -686,7 +693,6 @@ int check_switches(int state) {
 		if(!menuStatus){
 			menuStatus = MENU_PAUSE;
 			char items[][MAX_LETTERS_IN_MENU] = {
-			" ",
 			"Resume",
 			#ifdef DEBUG
 			"[DEBUG] cheat",
@@ -719,6 +725,10 @@ int check_switches(int state) {
 					printGrid();
 					mines_untagged = MAX_MINES;
 					cells_tagged = 0;
+				} else if (game_state == GAME_STATE_ENDED){
+					menuStatus = MENU_GAMEOVER;
+					gameOverCommon("What next?");
+					break;
 				}
 				discover();
 				break;
@@ -760,20 +770,20 @@ int check_switches(int state) {
 				break;
 			case MENU_PAUSE:
 				switch (menuPosition){
-					case 1:
+					case 0:
 						//resume
 						menuStatus = MENU_NONE;
 						clear_screen();
 						printGrid();
 						break;
-					case 2:
+					case 1:
 						//cheat
 #ifdef DEBUG
 						menuStatus = MENU_NONE;
 						clear_screen();
 						printMines();
 						break;
-					case 3:
+					case 2:
 #endif //DEBUG
 						//quit to menu
 						main_menu();
@@ -783,18 +793,19 @@ int check_switches(int state) {
 				break;
 			case MENU_GAMEOVER:
 				switch (menuPosition) {
-					case 1:
+					case 0:
 						//New game
 						game_state = GAME_STATE_STARTING;
-						menuStatus = 0;
+						menuStatus = MENU_NONE;
+						printGrid();
+						break;
+					case 1:
+						//View board
+						clear_screen();
+						menuStatus = MENU_NONE;
 						printGrid();
 						break;
 					case 2:
-						//View board
-						clear_screen();
-						printGrid();
-						break;
-					case 3:
 						//Main menu
 						main_menu();
 						break;
