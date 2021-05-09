@@ -42,6 +42,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef MINES_H_
 #define MINES_H_
 
+// if debug mode define this here
+#define DEBUG
+
 //
 // Cell
 //
@@ -64,10 +67,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAX_LETTERS_IN_MENU 20
 #define LETTER_HEIGHT_IN_MENU 10
 
+#define MENU_NONE 0
+#define MENU_START 1
+#define MENU_PAUSE 2
+#define MENU_GAMEOVER 3
+#define MENU_INSTRUCTIONS 4
+
+
+
 typedef struct{
     uint16_t cells[8]; //The cells that are adjacent (up to 8)
     uint8_t counter; //The number of cells actually adjacent
 } adjCells;
 
-typedef void (*FuncPointer)(void);
 #endif // MINES_H_

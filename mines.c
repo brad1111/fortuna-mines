@@ -35,23 +35,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mines.h"
 
 
-int blink(int);
 int update_dial(int);
 int collect_delta(int);
 int check_switches(int);
 int freeRam();
+#ifdef DEBUG
 int freeram_output(int);
+#endif //DEBUG
 adjCells adjacent_cells(int);
 uint8_t is_mine(int);
 void printMenu(char*,char*,uint8_t);
 void setup_game();
-
+void discover_pos(int);
+void printCell(int);
+void update_selection_position(int,uint16_t);
+void update_selection_text(int);
+void printMinesLeft();
+void printMenuSelected(uint8_t,uint8_t);
+void main_menu();
 
 int position = 0;
 uint8_t menuPosition = 0;
 uint8_t menuEntries = 0;
-FuncPointer* menuChoices;
-uint8_t inMenu = 0;
+uint8_t menuStatus = MENU_NONE;
+
 
 
 // Minesweeper stuff
@@ -83,7 +90,7 @@ uint16_t rng() {
 ** disallowed is a length 9 array which contains the elements surrounding the players position
 ** all disallowed values must be one more than they represent
 */
-void generate_mines(int pos){
+void generate_mines(uint16_t pos){
 	// get states adjacent to pos
 	adjCells disallowedAdjacent = adjacent_cells(pos);
 
@@ -297,7 +304,6 @@ void sweep_adjacent(int pos){
  */
 void clear_adjacent(int pos){
 	adjCells adjacentCells = adjacent_cells(pos);
-	uint8_t adjacentCounter = 0;
 	uint16_t cellId;
 	for(uint8_t j=0; j < adjacentCells.counter; j++){
 		cellId = adjacentCells.cells[j];
@@ -357,7 +363,7 @@ void printMines(){
 		if(!is_mine(i)){ // NOT A MINE
 //			display_char('-');
 			fill_rectangle(sqr, WHITE);
-			char out[1];
+			char out[4];
 			sprintf(out, "%d", adjacent_mines(i,0));
 			display_string_xy(out, sqr.left, sqr.top);
 		} else { //IS A MINE
@@ -374,14 +380,25 @@ void printMines(){
  * Prints no of mines left to sweep
  */
 void printMinesLeft(){
+
 	char out[10];
+#ifdef DEBUG
 	sprintf(out, "mines:%2d", mines_untagged);
 	display_string_xy(out,140,200);
 	sprintf(out, "tags:%2d", cells_tagged);
 	display_string_xy(out,140,210);
 	sprintf(out, "clr:%2d", cells_discovered);
 	display_string_xy(out,140,220);
-
+#else
+	uint8_t value;
+	if(cells_tagged > MAX_MINES){
+		value = 0;
+	} else {
+		value = MAX_MINES - cells_tagged;
+	}
+	sprintf(out, "mines:%2d", value);
+	display_string_xy(out,140,200);
+#endif //DEBUG
 
 }
 
@@ -457,10 +474,12 @@ void question(){
 	if(is_questioned(pos)){
 		//unquestion
 		position_states[pos] &= (255-3); //get rid of question
-	} else if(can_discover(pos) || is_tagged(pos)){
+	} else if(is_tagged(pos)){
 		//make pos
 		untag(pos);
 		position_states[pos] |= 3; //question is one bit higher than tag
+	} else if(can_discover(pos)){
+		position_states[pos] |= 3;
 	}
 }
 
@@ -479,7 +498,7 @@ void update_selection_position(int position, uint16_t colour){
 }
 
 
-char selection_text[2];
+char selection_text[4];
 void update_selection_text(int position){
 	update_selection_position(position, WHITE);
 	uint8_t val = adjacent_mines(position,0);
@@ -489,11 +508,27 @@ void update_selection_text(int position){
 	}
 }
 
-void empty(void){
-	//do something so that this doesn't get optimised out?
-	menuPosition = 0;
-}
 
+void instructions(){
+	menuStatus = MENU_INSTRUCTIONS;
+	clear_screen();
+	char out[50];
+	sprintf(out, "Spinning the wheel moves left/right or\n");
+	display_string(out);
+	sprintf(out, " up/down depending on mode.\n");
+	display_string(out);
+	sprintf(out, "Default is left/right.\n");
+	display_string(out);
+	sprintf(out, "You can toggle between modes using up.\n");
+	display_string(out);
+	sprintf(out, "Center button clears a cell, long press sweeps\n");
+	display_string(out);
+	sprintf(out, "Left tags as a mine, right is a question tag.\n");
+	display_string(out);
+	sprintf(out, "Down displays pause menu.\n\n");
+	display_string(out);
+	sprintf(out, "Press center to return.");
+}
 
 void main(void) {
     /* 8MHz clock, no prescaling (DS, p. 48) */
@@ -504,10 +539,11 @@ void main(void) {
     os_init_scheduler();
     os_init_ruota();
 
-//    os_add_task( blink,            25, 1);
     os_add_task( collect_delta,   200, 1);
     os_add_task( check_switches,  100, 1);
+	#ifdef DEBUG
 	os_add_task( freeram_output,   20, 1);
+	#endif
 
 
 //setup seclection position
@@ -518,13 +554,13 @@ void main(void) {
 
 	//setup watchdog interrupt so we can get a TRNG value to give as seed for PRNG
 
-//	//clear watchdog timer
-//	MCUSR &= ~(1<<)
-//
-//	//write logical 1 to both WDCE and WDE
+	//clear watchdog timer
+	//MCUSR &= ~(1<<)
+
+	//write logical 1 to both WDCE and WDE
 //	WDTCSR |= (1<<WDCE) | (1<<WDE);
-//
-//	//disable WD timer
+
+	//disable WD timer
 //
 //	WDTCSR = 0x00;
 //
@@ -539,45 +575,30 @@ void main(void) {
 	rng_state = eeprom_read_word(&RNG_STATE);
 
 //	printGrid();
-
-	char arr[3][MAX_LETTERS_IN_MENU] = {
-	" ",
-	"Play (99 mines)",
-	"Instructions"
-	};
-	inMenu = 1;
-	FuncPointer menuChoicesLocal[3] = {
-	*empty,
-	*setup_game,
-	*empty
-    };
-	menuChoices = menuChoicesLocal;
-	printMenu("a",arr,3);
-	display_string_xy(arr[2],100,10);
+	main_menu();
 
     sei();
     for(;;){}
 
 }
 
+void main_menu(){
+	clear_screen();
+	char arr[3][MAX_LETTERS_IN_MENU] = {
+	" ",
+	"Play (99 mines)",
+	"Instructions"
+	};
+	menuStatus = MENU_START;
+	printMenu("Fortuna Mines",(char*) arr,3);
+}
+
 
 void setup_game(void){
-	//setup seed based on time to press the first button
-	if(rng_state == 0){
-		rng_state = 0x0bae;
-	}
-
-	generate_mines(position);
-    printGrid();
-	game_started = 1;
-	inMenu = 0;
-	mines_untagged = MAX_MINES;
-	cells_tagged = 0;
-	discover();
 }
 
 int collect_delta(int state) {
-	if(!inMenu){
+	if(!menuStatus){
 		//in game
 		int oldPos = position % BOARD_ITEMS;
 		if(scroll_direction == SCROLL_HORIZONTAL){
@@ -593,17 +614,20 @@ int collect_delta(int state) {
 		}
 
 
-		uint16_t oldPosColour;
+		#ifdef DEBUG
 		char output[30];
 		sprintf(output,"stat:%d\npos:%d\nrng:%d;%d", position_states[position], position, rng_state, rng_count);
 		display_string_xy(output, 0, 210);
+		#endif //DEBUG
 		printCell(oldPos);
 		update_selection_position(position, BLUE);
 	} else {
 		//in menu
 		uint8_t oldPos = menuPosition;
 		menuPosition = (menuPosition + os_enc_delta()) % menuEntries;
-		printMenuSelected(oldPos, menuPosition);
+		if(oldPos != menuPosition){
+			printMenuSelected(oldPos, menuPosition);
+		}
 	}
 	return state;
 }
@@ -612,45 +636,76 @@ int collect_delta(int state) {
 int check_switches(int state) {
 
 	if (get_switch_press(_BV(SWN))) {
-		if(!inMenu){
+		if(!menuStatus){
 			scroll_direction = !scroll_direction;
 		}
 	}
 
 	if (get_switch_press(_BV(SWE))) {
-		if(!inMenu){
+		if(!menuStatus){
 			question();
 		}
 	}
 
 	if (get_switch_press(_BV(SWS))) {
-		if(!inMenu){
+		if(!menuStatus){
 			//TODO put up a menu here
 			printMines();
 		}
 	}
 
 	if (get_switch_press(_BV(SWW))) {
-		if(!inMenu){
+		if(!menuStatus){
 			tag();
 		}
 	}
 
 
 	if (get_switch_press(_BV(SWC))) {
-		if(inMenu){
-			if(menuPosition >= 0 && menuPosition < menuEntries){
-				(*menuChoices[menuPosition])();
-			}
-		} else {
-			discover();
+		switch (menuStatus) {
+			case MENU_NONE:
+				if(!game_started){
+					//setup seed based on time to press the first button
+					if(rng_state == 0){
+						rng_state = 0x0bae;
+					}
+
+					generate_mines(position);
+					printGrid();
+					game_started = 1;
+					mines_untagged = MAX_MINES;
+					cells_tagged = 0;
+				}
+				discover();
+				break;
+			case MENU_START:
+				switch (menuPosition) {
+					case 1:
+						menuStatus = 0;
+						printGrid();
+						break;
+					case 2:
+						instructions();
+						break;
+					default:
+						break;
+				}
+				break;
+			case MENU_INSTRUCTIONS:
+				main_menu();
+				break;
+			default:
+				break;
 		}
+
 
 	}
 
 	if (get_switch_rpt(_BV(SWC))) {
 		//Sweep
-		sweep_adjacent(position);
+//		if(!menuStatus && cells_discovered){
+//			sweep_adjacent(position);
+//		}
 	}
 
 	return state;
@@ -682,6 +737,8 @@ void printMenuSelected(uint8_t old_pos, uint8_t new_pos){
 	display_string_xy("*", 130, 10 * (offset + new_pos));
 }
 
+#ifdef DEBUG
+
 int freeram_output (int state){
 	char out[10];
 	sprintf(out, "%d\n", freeRam());
@@ -699,4 +756,4 @@ int freeRam () {
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 
-
+#endif // DEBUG
