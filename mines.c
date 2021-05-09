@@ -80,6 +80,8 @@ volatile uint16_t rng_count = 0;
 uint8_t BOARD_SIZE_X = 30;
 uint8_t BOARD_SIZE_Y = 16;
 uint8_t MAX_MINES = 99;
+uint8_t OFFSET_X = 1;
+uint8_t OFFSET_Y = 1;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -513,10 +515,10 @@ void update_selection_position(int position, uint16_t colour){
 	int x = position % BOARD_SIZE_X;
 	int y = (position / BOARD_SIZE_X) % BOARD_SIZE_Y;
 
-	selection_position.left   = x*10;
-	selection_position.right  =	x*10+10;
-	selection_position.top	  = y*10;
-	selection_position.bottom = y*10+10;
+	selection_position.left   = (OFFSET_X + x)*10;
+	selection_position.right  =	(OFFSET_X + x)*10+10;
+	selection_position.top	  = (OFFSET_Y + y)*10;
+	selection_position.bottom = (OFFSET_Y + y)*10+10;
 	fill_rectangle(selection_position, colour);
 }
 
@@ -726,6 +728,8 @@ int check_switches(int state) {
 						//10 mines
 						BOARD_SIZE_X = 9;
 						BOARD_SIZE_Y = 9;
+						OFFSET_X = 11;
+						OFFSET_Y = 5;
 						MAX_MINES=10;
 						setup_game();
 						break;
@@ -733,6 +737,8 @@ int check_switches(int state) {
 						//20 mines
 						BOARD_SIZE_X = 16;
 						BOARD_SIZE_Y = 16;
+						OFFSET_X = 8;
+						OFFSET_Y = 1;
 						MAX_MINES=20;
 						setup_game();
 						break;
@@ -740,6 +746,8 @@ int check_switches(int state) {
 						//99 mines
 						BOARD_SIZE_X = 30;
 						BOARD_SIZE_Y = 16;
+						OFFSET_X = 1;
+						OFFSET_Y = 1;
 						MAX_MINES=99;
 						setup_game();
 						break;
