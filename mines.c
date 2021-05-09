@@ -54,6 +54,7 @@ void printMinesLeft();
 void printMenuSelected(uint8_t,uint8_t);
 void main_menu();
 
+// position stuff
 int position = 0;
 uint8_t menuPosition = 0;
 uint8_t menuEntries = 0;
@@ -66,13 +67,19 @@ uint8_t menuStatus = MENU_NONE;
 volatile uint16_t rng_state = 0;
 static uint16_t EEMEM RNG_STATE;
 volatile rectangle selection_position;
-volatile uint8_t position_states[BOARD_ITEMS];
+volatile uint8_t position_states[30*16];
 volatile uint8_t scroll_direction = 0;
 volatile uint8_t game_state = GAME_STATE_NONE;
 volatile uint8_t mines_untagged= 0;
 volatile uint8_t cells_tagged = 0;
 volatile uint16_t cells_discovered = 0;
 volatile uint16_t rng_count = 0;
+
+
+//board sizing
+uint8_t BOARD_SIZE_X = 30;
+uint8_t BOARD_SIZE_Y = 16;
+uint8_t MAX_MINES = 99;
 
 //XORSHIFT16
 uint16_t rng() {
@@ -600,13 +607,15 @@ void main(void) {
 
 void main_menu(){
 	clear_screen();
-	char arr[3][MAX_LETTERS_IN_MENU] = {
-	" ",
-	"Play (99 mines)",
+	char arr[4][MAX_LETTERS_IN_MENU] = {
+	"Play Beginner",
+	"Play Intermediate",
+	"Play Expert",
 	"Instructions"
 	};
 	menuStatus = MENU_START;
-	printMenu("Fortuna Mines",(char*) arr,3);
+	game_state = GAME_STATE_NONE;
+	printMenu("Fortuna Mines",(char*) arr,4);
 }
 
 
@@ -645,6 +654,14 @@ int collect_delta(int state) {
 	return state;
 }
 
+/*
+** Sets up the game to before start state
+*/
+void setup_game(){
+	menuStatus = 0;
+	game_state = GAME_STATE_STARTING;
+	printGrid();
+}
 
 int check_switches(int state) {
 
@@ -662,8 +679,17 @@ int check_switches(int state) {
 
 	if (get_switch_press(_BV(SWS))) {
 		if(!menuStatus){
-			//TODO put up a menu here
-			printMines();
+			menuStatus = MENU_PAUSE;
+			char items[][MAX_LETTERS_IN_MENU] = {
+			" ",
+			"Resume",
+			#ifdef DEBUG
+			"[DEBUG] cheat",
+			#endif //DEBUG
+			"Quit to menu"
+		    };
+			clear_screen();
+			printMenu("Paused", (char*) items, sizeof(items)/(MAX_LETTERS_IN_MENU * sizeof(char)));
 		}
 	}
 
@@ -693,15 +719,53 @@ int check_switches(int state) {
 				break;
 			case MENU_START:
 				switch (menuPosition) {
+					case 0:
+						//10 mines
+						BOARD_SIZE_X = 9;
+						BOARD_SIZE_Y = 9;
+						MAX_MINES=10;
+						setup_game();
+						break;
 					case 1:
+						//20 mines
+						BOARD_SIZE_X = 16;
+						BOARD_SIZE_Y = 16;
+						MAX_MINES=20;
+						setup_game();
+						break;
+					case 2:
 						//99 mines
-						menuStatus = 0;
-						game_state = GAME_STATE_STARTING;
+						BOARD_SIZE_X = 30;
+						BOARD_SIZE_Y = 16;
+						MAX_MINES=99;
+						setup_game();
+						break;
+					case 3:
+						instructions();
+						break;
+					default:
+						break;
+				}
+				break;
+			case MENU_PAUSE:
+				switch (menuPosition){
+					case 1:
+						//resume
+						menuStatus = MENU_NONE;
+						clear_screen();
 						printGrid();
 						break;
 					case 2:
-						instructions();
+						//cheat
+#ifdef DEBUG
+						menuStatus = MENU_NONE;
+						clear_screen();
+						printMines();
 						break;
+					case 3:
+#endif //DEBUG
+						//quit to menu
+						main_menu();
 					default:
 						break;
 				}

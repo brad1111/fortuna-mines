@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MINES_H_
 
 // if debug mode define this here
-#define DEBUG
+//#define DEBUG
 
 //
 // Cell
@@ -56,10 +56,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // 00000y11 - means it is questioned
 // 00000x00 - refers to whether a mine (1 means it is )
 
-#define BOARD_SIZE_X 30
-#define BOARD_SIZE_Y 16
+//#define BOARD_SIZE_X 30
+//#define BOARD_SIZE_Y 16
 #define BOARD_ITEMS (BOARD_SIZE_X * BOARD_SIZE_Y)
-#define MAX_MINES 99
+//#define MAX_MINES 99
 
 #define SCROLL_HORIZONTAL 0
 #define SCROLL_VERTICAL 1
