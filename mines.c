@@ -436,7 +436,7 @@ void gameOverCommon(char* title){
 	"View Board",
 	"Main Menu"
     };
-	clear_screen();
+//	clear_screen();
 	printMenu(title, (char*) items, GAME_OVER_MENU_ITEMS_COUNT);
 }
 
@@ -658,6 +658,9 @@ int collect_delta(int state) {
 ** Sets up the game to before start state
 */
 void setup_game(){
+	mines_untagged= 0;
+	cells_tagged = 0;
+	cells_discovered = 0;
 	menuStatus = 0;
 	game_state = GAME_STATE_STARTING;
 	printGrid();

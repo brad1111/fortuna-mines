@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MINES_H_
 
 // if debug mode define this here
-//#define DEBUG
+#define DEBUG
 
 //
 // Cell
