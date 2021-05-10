@@ -459,7 +459,7 @@ void discover_pos(int pos){
 				adjacent_mines(pos,1);
 			}
 			cells_discovered++;
-			if(cells_discovered == (uint8_t) (BOARD_ITEMS - MAX_MINES)){
+			if(cells_discovered == ((uint16_t) BOARD_SIZE_X * (uint16_t) BOARD_SIZE_Y) - (uint16_t) MAX_MINES){
 				win();
 			}
 		}
