@@ -5,10 +5,10 @@ It has 3 board sizes based on Microsofts Minesweeper:
 - Intermediate: 16x16, 20 mines
 - Expert: 30x16, 99 mines
 
-![Main menu](/images/fortuna_mines_/main_menu.jpg)
-![Intermediate board](/images/fortuna_mines_/medium_board.jpg)
-![Expert board](/images/fortuna_mines_/expert_board.jpg)
-![Failed expert board, on mines screen](/images/fortuna_mines_/mines_screen.jpg)
+![Main menu](/images/fortuna_mines_main_menu.jpg)
+![Intermediate board](/images/fortuna_mines_medium_board.jpg)
+![Expert board](/images/fortuna_mines_expert_board.jpg)
+![Failed expert board, on mines screen](/images/fortuna_mines_mines_screen.jpg)
 
 ## Installing
 You can either download the `mines.hex` file from releases and upload using:
